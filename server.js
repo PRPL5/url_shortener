@@ -40,3 +40,17 @@ app.get('/short.link/:shortUrl', (req, res) => {
     res.status(404).send('URL not found');
   }
 });
+
+app.use((req, res, next) => {
+  if (!req.cookies.user_id) {
+    const newUserId = uuidv4();
+    res.cookie("user_id", newUserId, {
+      httpOnly: true,
+      sameSite: "lax",
+      maxAge: 1000 * 60 * 60 * 24 * 365 // 1 year
+    });
+    req.cookies.user_id = newUserId; // make sure request also has it
+    console.log("Assigned new user_id:", newUserId);
+  }
+  next();
+});
