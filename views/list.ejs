@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>All Shortened URLs</title>
+<!DOCTYPE html>
+<html>
+<head>
+  <title>All Shortened URLs</title>
+</head>
+<body>
+  <h1>All Shortened Links</h1>
+
+  <% if (!urls || urls.length === 0) { %>
+    <p>No URLs have been shortened yet.</p>
+  <% } else { %>
+    <table border="1" cellpadding="5">
+      <thead>
+        <tr>
+          <th>Short URL</th>
+          <th>Original URL</th>
+                <th>Clicks</th> 
+          <th>Expires At</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% urls.forEach(function(url) { %>
+          <tr>
+            <td>
+              <a href="/<%= url.short_id %>">https://short.link/<%= url.short_id %></a>
+            </td>
+            <td>
+              <a href="<%= url.original_url %>" target="_blank" rel="noopener noreferrer"><%= url.original_url %></a>
+            </td>
+                        <td><%= url.clicks %></td>
+
+            <td>
+              <% if (url.expires_at) { %>
+                <%= new Date(url.expires_at).toLocaleString() %>
+              <% } else { %>
+                never
+              <% } %>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  <% } %>
+
+  <p><a href="/">Create New Short URL</a></p>
+</body>
+</html>
