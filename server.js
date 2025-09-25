@@ -2,6 +2,7 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import { v4 as uuidv4 } from "uuid";
 import urlRoutes from "./routes/urlRoutes.js";
+import { getAllUrls } from "./controllers/urlController.js";
 
 const app = express();
 
@@ -18,9 +19,7 @@ app.use((req, res, next) => {
 
 app.set("view engine", "ejs");
 
-app.get("/", (req, res) => {
-  res.render("index");
-});
+app.get("/", getAllUrls);
 
 app.use("/", urlRoutes);
 
@@ -47,9 +46,9 @@ app.use((req, res, next) => {
     res.cookie("user_id", newUserId, {
       httpOnly: true,
       sameSite: "lax",
-      maxAge: 1000 * 60 * 60 * 24 * 365 // 1 year
+      maxAge: 1000 * 60 * 60 * 24 * 365
     });
-    req.cookies.user_id = newUserId; // make sure request also has it
+    req.cookies.user_id = newUserId; 
     console.log("Assigned new user_id:", newUserId);
   }
   next();

@@ -30,7 +30,7 @@ await pool.query(
     const qrCode = await QRCode.toDataURL(url);
 console.log("Creating short URL for user:", userId);
 
-    res.render("result", { shortUrl, expiresAt, qrCode, shortId });
+  res.redirect('/');
   } catch (err) {
     console.error(err);
     res.status(500).send("Database error");
@@ -67,6 +67,7 @@ export async function redirectShortUrl(req, res) {
 }
 
 
+
 export async function listUserLinks(req, res) {
   const userId = req.cookies.user_id;
   console.log("Fetching links for user:", userId);
@@ -79,7 +80,18 @@ export async function listUserLinks(req, res) {
        ORDER BY created_at DESC`,
       [userId]
     );
-    res.render("list", { urls: result.rows });
+
+    const rows = result.rows;
+    const rowsWithQr = await Promise.all(rows.map(async (r) => {
+      try {
+        const qr = await QRCode.toDataURL(r.original_url);
+        return { ...r, qr };
+      } catch (e) {
+        return { ...r, qr: null };
+      }
+    }));
+
+    res.render("main", { urls: rowsWithQr });
   } catch (err) {
     console.error(err);
     res.status(500).send("Database error");
@@ -87,15 +99,70 @@ export async function listUserLinks(req, res) {
 }
 
 
+export async function deleteShortUrl(req, res) {
+  const { shortId } = req.params;
+  const userId = req.cookies.user_id;
+
+  if (!userId) return res.status(403).send('Forbidden');
+
+  try {
+    const result = await pool.query(
+      'DELETE FROM urls WHERE short_id = $1 AND user_id = $2 RETURNING id',
+      [shortId, userId]
+    );
+
+    if (result.rowCount === 0) {
+      // nothing deleted (not found or not owned)
+      return res.status(404).send('Not found or not permitted');
+    }
+
+    return res.redirect('/');
+  } catch (err) {
+    console.error('Error deleting short url:', err);
+    return res.status(500).send('Server error');
+  }
+}
+
+
 
 export async function getAllUrls(req, res) {
   try {
+    const userId = req.cookies.user_id;
+
+    if (!userId) {
+      return res.render('main', { urls: [] });
+    }
+
     const result = await pool.query(
-      "SELECT * FROM urls"
+      `SELECT short_id, original_url, expires_at, clicks
+       FROM urls
+       WHERE user_id = $1
+       ORDER BY created_at DESC`,
+      [userId]
     );
+
     const urls = result.rows;
 
-    res.render("list", { urls, shortId: "example-short-id" });
+    const urlsWithQr = await Promise.all(urls.map(async (r) => {
+      try {
+        const qr = await QRCode.toDataURL(r.original_url);
+        return { ...r, qr };
+      } catch (e) {
+        return { ...r, qr: null };
+      }
+    }));
+
+    let lastShort = null;
+    if (req.cookies && req.cookies.last_short) {
+      try {
+        lastShort = JSON.parse(req.cookies.last_short);
+      } catch (e) {
+        lastShort = null;
+      }
+      res.cookie('last_short', '', { maxAge: 0 });
+    }
+
+    res.render("main", { urls: urlsWithQr, lastShort });
 
   } catch (err) {
     console.error(err);
