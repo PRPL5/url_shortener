@@ -1,9 +1,12 @@
 import pool from "../db.js";
 import { v4 as uuidv4 } from "uuid";
-import QRCode from "qrcode";
-export async function createShortUrl(req, res) {
-  const { url, expiry } = req.body;
+import QRCode from "qrcode";export async function createShortUrl(req, res) {
+  let { url, expiry } = req.body;
   if (!url) return res.status(400).send("URL required");
+
+  if (!/^https?:\/\//i.test(url)) {
+    url = `http://${url}`;
+  }
 
   const shortId = uuidv4().slice(0, 6);
   const userId = req.cookies.user_id;
@@ -19,23 +22,23 @@ export async function createShortUrl(req, res) {
   const expiresAt = new Date(Date.now() + minutes * 60000);
 
   try {
-await pool.query(
-  `INSERT INTO urls (short_id, original_url, expires_at, user_id)
-   VALUES ($1, $2, $3, $4)`,
-  [shortId, url, expiresAt, userId]
-);
-
+    await pool.query(
+      `INSERT INTO urls (short_id, original_url, expires_at, user_id)
+       VALUES ($1, $2, $3, $4)`,
+      [shortId, url, expiresAt, userId]
+    );
 
     const shortUrl = `${req.protocol}://${req.get("host")}/${shortId}`;
     const qrCode = await QRCode.toDataURL(url);
-console.log("Creating short URL for user:", userId);
+    console.log("Creating short URL for user:", userId);
 
-  res.redirect('/');
+    res.redirect('/');
   } catch (err) {
     console.error(err);
     res.status(500).send("Database error");
   }
 }
+
 export async function redirectShortUrl(req, res) {
   const { shortId } = req.params;
 
